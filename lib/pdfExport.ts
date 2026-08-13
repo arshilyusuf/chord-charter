@@ -11,10 +11,10 @@ export function exportSongToPdf(song: Song) {
   const colWidth = (pageWidth - margin * 2 - gap) / 2;
   const bottomLimit = pageHeight - margin;
 
-  const titleFontSize = 17;
+  const titleFontSize = 20;
   const metaFontSize = 9.5;
   const sectionFontSize = 10.5;
-  const textFontSize = 9.5; // shared by chord row + lyric row so char widths line up
+  const textFontSize = 10; // shared by chord row + lyric row so char widths line up
   const rowGap = 1; // gap between chord row and lyric row
   const lineGap = 3; // gap between lyric lines
   const sectionGapAfter = 7;
@@ -84,33 +84,104 @@ export function exportSongToPdf(song: Song) {
 
     doc.setFont("courier", "normal");
     doc.setFontSize(textFontSize);
-    const charWidth = doc.getTextWidth("0"); // Courier is monospace: constant per-char width
+    const charWidth = doc.getTextWidth("0"); // Constant per-char width
+    const maxChars = Math.floor(colWidth / charWidth); // Max characters per column
 
-    for (const line of section.lines) {
-      const hasChords = line.chords.length > 0;
-      const chordRowHeight = hasChords ? textFontSize + rowGap : 0;
-      const rowHeight = chordRowHeight + textFontSize + lineGap;
-      ensureSpace(rowHeight);
+    for (const originalLine of section.lines) {
+      let text = originalLine.text || "";
 
-      if (hasChords) {
-        doc.setFont("courier", "bold");
-        doc.setTextColor(40, 40, 40);
-        for (const chord of line.chords) {
-          doc.text(chord.symbol, x + chord.position * charWidth, y);
-        }
-        y += textFontSize + rowGap;
+      // 1. If chords are placed after the lyrics end, pad the string with spaces
+      // so our wrapping logic doesn't cut off dangling chords.
+      let maxChordPos = 0;
+      if (originalLine.chords && originalLine.chords.length > 0) {
+        maxChordPos = Math.max(...originalLine.chords.map((c) => c.position));
+      }
+      if (text.length <= maxChordPos) {
+        text = text.padEnd(maxChordPos + 1, " ");
       }
 
-      doc.setFont("courier", "normal");
-      doc.setTextColor(0, 0, 0);
-      doc.text(line.text || " ", x, y);
-      y += textFontSize + lineGap;
+      // 2. Break the original line into sub-lines that fit the column width
+      const subLines: { text: string; chords: typeof originalLine.chords }[] =
+        [];
+
+      if (text.length === 0) {
+        subLines.push({ text: " ", chords: originalLine.chords });
+      } else {
+        let startIndex = 0;
+        while (startIndex < text.length) {
+          let endIndex = startIndex + maxChars;
+
+          // Try to break at the last space to avoid cutting words in half
+          if (endIndex < text.length) {
+            const lastSpace = text.lastIndexOf(" ", endIndex);
+            if (lastSpace > startIndex) {
+              endIndex = lastSpace;
+            }
+          }
+
+          // Extract text for this wrapped line
+          const subText = text.substring(startIndex, endIndex);
+
+          // Find chords that belong to this wrapped line and adjust their positions
+          const subChords = originalLine.chords
+            .filter((c) => c.position >= startIndex && c.position < endIndex)
+            .map((c) => ({
+              ...c,
+              position: c.position - startIndex, // Shift position to start of new line
+            }));
+
+          subLines.push({ text: subText, chords: subChords });
+          startIndex = endIndex;
+        }
+      }
+
+      // 3. Render the newly wrapped sub-lines
+      for (const line of subLines) {
+        const hasChords = line.chords && line.chords.length > 0;
+        const chordRowHeight = hasChords ? textFontSize + rowGap : 0;
+        const rowHeight = chordRowHeight + textFontSize + lineGap;
+        ensureSpace(rowHeight);
+
+        if (hasChords) {
+          doc.setFont("courier", "bold");
+          doc.setTextColor(40, 40, 40);
+          for (const chord of line.chords) {
+            doc.text(chord.symbol, x + chord.position * charWidth, y);
+          }
+          y += textFontSize + rowGap;
+        }
+
+        doc.setFont("courier", "normal");
+        doc.setTextColor(0, 0, 0);
+        doc.text(line.text || " ", x, y);
+        y += textFontSize + lineGap;
+      }
     }
 
     y += sectionGapAfter;
   }
 
   const filename = `${(song.title || "chord-chart").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
-  doc.save(filename);
+
+  // 1. Output the PDF as a Blob
+  const pdfBlob = doc.output("blob");
+
+  // 2. Wrap it in a new Blob with a generic octet-stream MIME type
+  const forceDownloadBlob = new Blob([pdfBlob], {
+    type: "application/octet-stream",
+  });
+  const blobUrl = URL.createObjectURL(forceDownloadBlob);
+
+  // 3. Create a temporary anchor tag to trigger the download
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+
+  // Append to body, click, and remove
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // 4. Clean up the URL object from memory
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
 }
-  

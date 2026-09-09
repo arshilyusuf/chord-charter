@@ -220,9 +220,13 @@ export async function exportSongToPdf(song: Song) {
           doc.setFont("IBMPlexMonoBold", "normal");
           doc.setFillColor(254, 226, 226);
           doc.setTextColor(153, 27, 27);
-          for (const chord of line.chords) {
+          const chordBadges = line.chords.map((chord) => {
             const chordX = x + chord.position * charWidth;
             const chordWidth = doc.getTextWidth(chord.symbol);
+            return { chord, chordX, chordWidth };
+          });
+
+          for (const { chordX, chordWidth } of chordBadges) {
             doc.roundedRect(
               chordX - 2,
               y - textFontSize + 1,
@@ -232,6 +236,10 @@ export async function exportSongToPdf(song: Song) {
               2,
               "F",
             );
+          }
+
+          doc.setTextColor(153, 27, 27);
+          for (const { chord, chordX } of chordBadges) {
             doc.text(chord.symbol, chordX, y);
           }
           y += textFontSize + rowGap;

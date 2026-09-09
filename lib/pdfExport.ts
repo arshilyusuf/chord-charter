@@ -1,8 +1,67 @@
 import { jsPDF } from "jspdf";
 import { Song } from "./types";
 
-export function exportSongToPdf(song: Song) {
+async function loadPdfFont(
+  doc: jsPDF,
+  url: string,
+  fileName: string,
+  fontName: string,
+) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Unable to load the PDF font: ${url}`);
+
+  const fontData = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < fontData.length; index += 1) {
+    binary += String.fromCharCode(fontData[index]);
+  }
+
+  doc.addFileToVFS(fileName, btoa(binary));
+  doc.addFont(fileName, fontName, "normal");
+}
+
+async function loadPdfImage(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Unable to load the PDF image: ${url}`);
+
+  const imageData = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < imageData.length; index += 1) {
+    binary += String.fromCharCode(imageData[index]);
+  }
+
+  return `data:image/png;base64,${btoa(binary)}`;
+}
+
+export async function exportSongToPdf(song: Song) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const [, , , , logoData] = await Promise.all([
+    loadPdfFont(
+      doc,
+      "/ClashGrotesk-Bold.ttf",
+      "ClashGrotesk-Bold.ttf",
+      "ClashGroteskBold",
+    ),
+    loadPdfFont(
+      doc,
+      "/ClashGrotesk-Medium.ttf",
+      "ClashGrotesk-Medium.ttf",
+      "ClashGroteskMedium",
+    ),
+    loadPdfFont(
+      doc,
+      "/ClashGrotesk-Light.ttf",
+      "ClashGrotesk-Light.ttf",
+      "ClashGroteskLight",
+    ),
+    loadPdfFont(
+      doc,
+      "/IBM_Plex_Mono/IBMPlexMono-Bold.ttf",
+      "IBMPlexMono-Bold.ttf",
+      "IBMPlexMonoBold",
+    ),
+    loadPdfImage("/Shruti26%20Profile%20Picture-15.png"),
+  ]);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -12,6 +71,7 @@ export function exportSongToPdf(song: Song) {
   const bottomLimit = pageHeight - margin;
 
   const titleFontSize = 20;
+  const creditFontSize = 12;
   const metaFontSize = 9.5;
   const sectionFontSize = 10.5;
   const textFontSize = 10; // shared by chord row + lyric row so char widths line up
@@ -19,6 +79,7 @@ export function exportSongToPdf(song: Song) {
   const lineGap = 3; // gap between lyric lines
   const sectionGapAfter = 7;
   const sectionGapBefore = 4;
+  const logoSize = 64;
 
   let col = 0; // 0 = left column, 1 = right column
   let x = margin;
@@ -26,12 +87,17 @@ export function exportSongToPdf(song: Song) {
   let contentStartY = margin; // y where both columns begin (below header on page 1)
 
   function drawHeader() {
-    doc.setFont("helvetica", "bold");
+    doc.setFont("ClashGroteskBold", "normal");
     doc.setFontSize(titleFontSize);
     doc.text(song.title || "Untitled Song", margin, y);
     y += titleFontSize + 4;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont("ClashGroteskMedium", "normal");
+    doc.setFontSize(creditFontSize);
+    doc.text("Shruti'26", margin, y);
+    y += creditFontSize + 1;
+
+    doc.setFont("ClashGroteskMedium", "normal");
     doc.setFontSize(metaFontSize);
     const meta = [
       song.key && `Key: ${song.key}`,
@@ -41,10 +107,18 @@ export function exportSongToPdf(song: Song) {
       .join("      ");
     if (meta) {
       doc.text(meta, margin, y);
-      y += metaFontSize + 4;
+      y += metaFontSize + 6;
     }
     doc.setDrawColor(200);
     doc.line(margin, y, pageWidth - margin, y);
+    doc.addImage(
+      logoData,
+      "PNG",
+      pageWidth - margin - logoSize,
+      margin - logoSize / 2,
+      logoSize,
+      logoSize,
+    );
     y += 12;
 
     // Both columns on this page start below the header, not at the raw top margin.
@@ -73,7 +147,7 @@ export function exportSongToPdf(song: Song) {
 
   for (const section of song.sections) {
     ensureSpace(sectionFontSize + sectionGapBefore + 4);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("ClashGroteskMedium", "normal");
     doc.setFontSize(sectionFontSize);
     const label =
       section.type === "solo" ? `${section.name} (Solo)` : section.name;
@@ -82,7 +156,7 @@ export function exportSongToPdf(song: Song) {
     doc.setTextColor(0, 0, 0);
     y += sectionFontSize + sectionGapBefore;
 
-    doc.setFont("courier", "normal");
+    doc.setFont("ClashGroteskMedium", "normal");
     doc.setFontSize(textFontSize);
     const charWidth = doc.getTextWidth("0"); // Constant per-char width
     const maxChars = Math.floor(colWidth / charWidth); // Max characters per column
@@ -143,15 +217,27 @@ export function exportSongToPdf(song: Song) {
         ensureSpace(rowHeight);
 
         if (hasChords) {
-          doc.setFont("courier", "bold");
-          doc.setTextColor(40, 40, 40);
+          doc.setFont("IBMPlexMonoBold", "normal");
+          doc.setFillColor(254, 226, 226);
+          doc.setTextColor(153, 27, 27);
           for (const chord of line.chords) {
-            doc.text(chord.symbol, x + chord.position * charWidth, y);
+            const chordX = x + chord.position * charWidth;
+            const chordWidth = doc.getTextWidth(chord.symbol);
+            doc.roundedRect(
+              chordX - 2,
+              y - textFontSize + 1,
+              chordWidth + 4,
+              textFontSize + 2,
+              2,
+              2,
+              "F",
+            );
+            doc.text(chord.symbol, chordX, y);
           }
           y += textFontSize + rowGap;
         }
 
-        doc.setFont("courier", "normal");
+        doc.setFont("ClashGroteskMedium", "normal");
         doc.setTextColor(0, 0, 0);
         doc.text(line.text || " ", x, y);
         y += textFontSize + lineGap;
@@ -161,7 +247,7 @@ export function exportSongToPdf(song: Song) {
     y += sectionGapAfter;
   }
 
-  const filename = `${(song.title || "chord-chart").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
+  const filename = `${song.title || "chord-chart"}.pdf`;
 
   // 1. Output the PDF as a Blob
   const pdfBlob = doc.output("blob");

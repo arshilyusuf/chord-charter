@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
 import { Line } from "@/lib/types";
-import { CHORD_FONT_SIZE, CHORD_FONT_FAMILY } from "@/lib/constants";
+import {
+  CHORD_FONT_FAMILY,
+  CHORD_FONT_SIZE,
+  LYRIC_FONT_FAMILY,
+} from "@/lib/constants";
 import ChordBadge from "./ChordBadge";
 
 interface Props {
@@ -78,8 +82,11 @@ export default function LyricLineEditor({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                 if (e.key === "Escape") setPending(null);
               }}
-              style={{ left: pending.position * charWidth }}
-              className="absolute top-0 w-14 text-xs font-mono font-semibold px-0.5 rounded border border-neutral-900 bg-white text-neutral-900 outline-none z-10"
+              style={{
+                left: pending.position * charWidth,
+                fontFamily: CHORD_FONT_FAMILY,
+              }}
+              className="absolute top-0 w-14 text-xs font-normal px-0.5 rounded border border-neutral-900 bg-white text-neutral-900 outline-none z-10"
             />
           )}
         </div>
@@ -87,8 +94,8 @@ export default function LyricLineEditor({
           value={line.text}
           onChange={(e) => onChangeText(e.target.value)}
           placeholder="Type lyric line…"
-          style={{ fontFamily: CHORD_FONT_FAMILY, fontSize: CHORD_FONT_SIZE }}
-          className="w-full bg-transparent leading-6 outline-none text-neutral-800 placeholder:text-neutral-300"
+          style={{ fontFamily: LYRIC_FONT_FAMILY, fontSize: CHORD_FONT_SIZE }}
+          className="w-full bg-transparent font-normal leading-6 outline-none text-neutral-800 placeholder:text-neutral-300"
         />
       </div>
       <button

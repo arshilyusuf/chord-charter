@@ -9,10 +9,12 @@ import {
   newLine,
 } from "./types";
 import { loadSong, saveSong } from "./storage";
+import { transposeChordSymbol, transposeKey } from "./transpose";
 
 export type SongAction =
   | { type: "LOAD"; song: Song }
   | { type: "SET_META"; meta: Partial<Pick<Song, "title" | "key" | "tempo">> }
+  | { type: "TRANSPOSE"; semitones: number }
   | { type: "ADD_SECTION"; sectionType: "lyrics" | "solo" }
   | { type: "REMOVE_SECTION"; sectionId: string }
   | { type: "RENAME_SECTION"; sectionId: string; name: string }
@@ -56,6 +58,22 @@ function reducer(state: Song, action: SongAction): Song {
 
     case "SET_META":
       return { ...state, ...action.meta };
+
+    case "TRANSPOSE":
+      return {
+        ...state,
+        key: state.key ? transposeKey(state.key, action.semitones) : state.key,
+        sections: state.sections.map((section) => ({
+          ...section,
+          lines: section.lines.map((line) => ({
+            ...line,
+            chords: line.chords.map((chord) => ({
+              ...chord,
+              symbol: transposeChordSymbol(chord.symbol, action.semitones),
+            })),
+          })),
+        })),
+      };
 
     case "ADD_SECTION":
       return {

@@ -1,8 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Chord Chart Maker",
@@ -16,9 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} font-sans bg-neutral-50 text-neutral-900 min-h-screen antialiased`}
-      >
+      <body className="font-sans bg-neutral-50 text-neutral-900 min-h-screen antialiased">
         {children}
       </body>
     </html>

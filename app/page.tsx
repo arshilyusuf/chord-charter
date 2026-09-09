@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { useSongStore } from "@/lib/useSongStore";
 import { emptySong } from "@/lib/types";
 import { exportSongToPdf } from "@/lib/pdfExport";
@@ -9,18 +10,62 @@ import SectionEditor from "@/components/SectionEditor";
 export default function Page() {
   const { song, dispatch } = useSongStore();
   const [importText, setImportText] = useState("");
+  const [transposeAmount, setTransposeAmount] = useState(0);
+
+  function changeTranspose(semitones: -1 | 1) {
+    if (transposeAmount + semitones < -11 || transposeAmount + semitones > 11)
+      return;
+
+    dispatch({ type: "TRANSPOSE", semitones });
+    setTransposeAmount(transposeAmount + semitones);
+  }
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-semibold tracking-tight text-neutral-900">
-          Raaga The Music Club - Chord Chart Maker
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1 justify-center items-left">
+          <Image
+            src="/Shruti26%20Profile%20Picture-15.png"
+            alt="Raaga The Music Club"
+            width={56}
+            height={56}
+            className="h-14 w-14 shrink-0 object-contain"
+          />
+          <h1 className="flex-1 min-w-0 text-[22px] font-semibold tracking-tight text-neutral-900">
+            Raaga The Music Club - Chord Chart Maker
+          </h1>
+        </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => changeTranspose(-1)}
+            disabled={transposeAmount === -11 || song.sections.length === 0}
+            aria-label="Transpose down one semitone"
+            title="Transpose down one semitone"
+            className="w-8 h-8 rounded-full border border-neutral-200 text-[16px] font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 transition-colors"
+          >
+            -
+          </button>
+          <span
+            aria-live="polite"
+            className="min-w-20 text-center text-[12px] font-medium text-neutral-900"
+          >
+            Transpose{" "}
+            {transposeAmount > 0 ? `+${transposeAmount}` : transposeAmount}
+          </span>
+          <button
+            onClick={() => changeTranspose(1)}
+            disabled={transposeAmount === 11 || song.sections.length === 0}
+            aria-label="Transpose up one semitone"
+            title="Transpose up one semitone"
+            className="w-8 h-8 rounded-full border border-neutral-200 text-[16px] font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 transition-colors"
+          >
+            +
+          </button>
           <button
             onClick={() => {
               if (confirm("Clear the current song? This cannot be undone.")) {
                 dispatch({ type: "LOAD", song: emptySong() });
+                setTransposeAmount(0);
               }
             }}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
@@ -28,7 +73,7 @@ export default function Page() {
             Clear
           </button>
           <button
-            onClick={() => exportSongToPdf(song)}
+            onClick={() => void exportSongToPdf(song)}
             className="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-700 text-white text-[13px] font-medium transition-colors shadow-sm"
           >
             Export PDF
@@ -68,7 +113,7 @@ export default function Page() {
               }}
               className="text-[13px] font-medium px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-700 text-white disabled:opacity-30 disabled:hover:bg-neutral-900 transition-colors"
             >
-              Import lyrics
+              Insert
             </button>
           </div>
         </div>

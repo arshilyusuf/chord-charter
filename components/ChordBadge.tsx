@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { ChordMark } from "@/lib/types";
+import { CHORD_FONT_FAMILY } from "@/lib/constants";
 
 interface Props {
   chord: ChordMark;
@@ -64,8 +65,11 @@ export default function ChordBadge({
             setEditing(false);
           }
         }}
-        style={{ left: chord.position * charWidth }}
-        className="absolute -top-0.5 w-14 text-xs font-mono font-semibold px-0.5 rounded border border-neutral-900 bg-white text-neutral-900 outline-none z-10"
+        style={{
+          left: chord.position * charWidth,
+          fontFamily: CHORD_FONT_FAMILY,
+        }}
+        className="absolute -top-0.5 w-14 text-xs font-bold px-0.5 rounded border border-neutral-900 bg-white text-neutral-900 outline-none z-10"
       />
     );
   }
@@ -81,9 +85,12 @@ export default function ChordBadge({
         e.preventDefault();
         onDelete();
       }}
-      style={{ left: chord.position * charWidth }}
+      style={{
+        left: chord.position * charWidth,
+        fontFamily: CHORD_FONT_FAMILY,
+      }}
       title="Drag to move · double-click to edit · right-click to delete"
-      className="absolute top-0 select-none cursor-grab active:cursor-grabbing text-xs font-mono font-bold px-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 whitespace-nowrap"
+      className="absolute top-0 select-none cursor-grab active:cursor-grabbing text-xs font-bold px-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 whitespace-nowrap"
     >
       {chord.symbol}
     </span>

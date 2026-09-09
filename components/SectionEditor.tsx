@@ -37,6 +37,7 @@ export default function SectionEditor({
           }
           className="text-[14px] font-semibold bg-transparent outline-none text-neutral-900 flex-1 min-w-0"
         />
+        <span className="text-zinc-300 mx-2">Click anywhere above the lyrics to insert a chord</span>
         <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 shrink-0">
           {section.type === "solo" ? "Solo" : "Lyrics"}
         </span>

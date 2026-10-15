@@ -3,12 +3,17 @@ import { useState } from "react";
 import Image from "next/image";
 import { useSongStore } from "@/lib/useSongStore";
 import { ChordMark, emptySong } from "@/lib/types";
+import { useProjectStore } from "@/lib/useProjectStore";
 import { exportSongToPdf } from "@/lib/pdfExport";
 import SongMetaForm from "@/components/SongMetaForm";
 import SectionEditor from "@/components/SectionEditor";
+import ProjectLibrary from "@/components/ProjectLibrary";
 
 export default function Page() {
   const { song, dispatch } = useSongStore();
+  const projectStore = useProjectStore(song, (nextSong) =>
+    dispatch({ type: "LOAD", song: nextSong }),
+  );
   const [importText, setImportText] = useState("");
   const [transposeAmount, setTransposeAmount] = useState(0);
   const [copiedChords, setCopiedChords] = useState<ChordMark[] | null>(null);
@@ -65,6 +70,7 @@ export default function Page() {
           <button
             onClick={() => {
               if (confirm("Clear the current song? This cannot be undone.")) {
+                projectStore.detachCurrentProject();
                 dispatch({ type: "LOAD", song: emptySong() });
                 setTransposeAmount(0);
               }
@@ -81,6 +87,18 @@ export default function Page() {
           </button>
         </div>
       </div>
+
+      <ProjectLibrary
+        projects={projectStore.projects}
+        currentProjectId={projectStore.currentProjectId}
+        isReady={projectStore.isReady}
+        storageError={projectStore.storageError}
+        onCreate={projectStore.createNewProject}
+        onSaveAs={projectStore.saveCurrentAsProject}
+        onOpen={projectStore.openProject}
+        onRename={projectStore.renameProject}
+        onDelete={projectStore.deleteProject}
+      />
 
       <SongMetaForm song={song} dispatch={dispatch} />
 

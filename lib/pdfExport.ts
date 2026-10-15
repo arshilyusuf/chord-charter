@@ -158,8 +158,8 @@ export async function exportSongToPdf(song: Song) {
 
     doc.setFont("ClashGroteskMedium", "normal");
     doc.setFontSize(textFontSize);
-    const charWidth = doc.getTextWidth("0"); // Constant per-char width
-    const maxChars = Math.floor(colWidth / charWidth); // Max characters per column
+    const charWidth = doc.getTextWidth("0"); // Chord positions use the monospace grid.
+    const maxTextWidth = colWidth - 4; // Keep only a small breathing room at the column edge.
 
     for (const originalLine of section.lines) {
       let text = originalLine.text || "";
@@ -174,7 +174,7 @@ export async function exportSongToPdf(song: Song) {
         text = text.padEnd(maxChordPos + 1, " ");
       }
 
-      // 2. Break the original line into sub-lines that fit the column width
+      // 2. Break the original line into sub-lines that fit the column width.
       const subLines: { text: string; chords: typeof originalLine.chords }[] =
         [];
 
@@ -183,11 +183,19 @@ export async function exportSongToPdf(song: Song) {
       } else {
         let startIndex = 0;
         while (startIndex < text.length) {
-          let endIndex = startIndex + maxChars;
+          let endIndex = startIndex;
+          while (
+            endIndex < text.length &&
+            doc.getTextWidth(text.substring(startIndex, endIndex + 1)) <=
+              maxTextWidth
+          ) {
+            endIndex += 1;
+          }
 
-          // Try to break at the last space to avoid cutting words in half
-          if (endIndex < text.length) {
-            const lastSpace = text.lastIndexOf(" ", endIndex);
+          if (endIndex === startIndex) {
+            endIndex += 1;
+          } else if (endIndex < text.length) {
+            const lastSpace = text.lastIndexOf(" ", endIndex - 1);
             if (lastSpace > startIndex) {
               endIndex = lastSpace;
             }

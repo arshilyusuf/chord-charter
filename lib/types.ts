@@ -28,6 +28,15 @@ export interface Song {
 }
 
 export const STORAGE_KEY = "chord-chart-song-v1";
+export const PROJECTS_STORAGE_KEY = "chord-chart-projects-v1";
+
+export interface SongProject {
+  id: string;
+  name: string;
+  song: Song;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export function emptySong(): Song {
   return { title: "Untitled Song", key: "", tempo: "", sections: [] };

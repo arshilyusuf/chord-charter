@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useSongStore } from "@/lib/useSongStore";
-import { emptySong } from "@/lib/types";
+import { ChordMark, emptySong } from "@/lib/types";
 import { exportSongToPdf } from "@/lib/pdfExport";
 import SongMetaForm from "@/components/SongMetaForm";
 import SectionEditor from "@/components/SectionEditor";
@@ -11,6 +11,7 @@ export default function Page() {
   const { song, dispatch } = useSongStore();
   const [importText, setImportText] = useState("");
   const [transposeAmount, setTransposeAmount] = useState(0);
+  const [copiedChords, setCopiedChords] = useState<ChordMark[] | null>(null);
 
   function changeTranspose(semitones: -1 | 1) {
     if (transposeAmount + semitones < -11 || transposeAmount + semitones > 11)
@@ -126,6 +127,8 @@ export default function Page() {
               index={i}
               total={song.sections.length}
               dispatch={dispatch}
+              copiedChords={copiedChords}
+              onCopyChords={setCopiedChords}
             />
           ))}
         </div>

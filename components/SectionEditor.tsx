@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { Dispatch } from "react";
-import { Section } from "@/lib/types";
+import { ChordMark, Section } from "@/lib/types";
 import { SongAction } from "@/lib/useSongStore";
 import { getMonospaceCharWidth } from "@/lib/charWidth";
 import LyricLineEditor from "./LyricLineEditor";
@@ -11,6 +11,8 @@ interface Props {
   index: number;
   total: number;
   dispatch: Dispatch<SongAction>;
+  copiedChords: ChordMark[] | null;
+  onCopyChords: (chords: ChordMark[]) => void;
 }
 
 export default function SectionEditor({
@@ -18,11 +20,12 @@ export default function SectionEditor({
   index,
   total,
   dispatch,
+  copiedChords,
+  onCopyChords,
 }: Props) {
   const charWidth = useMemo(() => getMonospaceCharWidth(), []);
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState("");
-
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
@@ -72,6 +75,14 @@ export default function SectionEditor({
           className="text-[12px] font-medium text-neutral-500 hover:text-neutral-900 shrink-0 px-2 transition-colors"
         >
           Paste text
+        </button>
+        <button
+          onClick={() =>
+            dispatch({ type: "DUPLICATE_SECTION", sectionId: section.id })
+          }
+          className="text-[12px] font-medium text-neutral-500 hover:text-neutral-900 shrink-0 px-2 transition-colors"
+        >
+          Duplicate section
         </button>
         <button
           onClick={() =>
@@ -173,6 +184,16 @@ export default function SectionEditor({
                   lineId: line.id,
                 })
               }
+              onCopyChords={() => onCopyChords(line.chords)}
+              onPasteChords={() =>
+                dispatch({
+                  type: "REPLACE_LINE_CHORDS",
+                  sectionId: section.id,
+                  lineId: line.id,
+                  chords: copiedChords ?? [],
+                })
+              }
+              canPasteChords={copiedChords !== null}
             />
             {i < section.lines.length - 1 && (
               <button

@@ -17,12 +17,14 @@ export type SongAction =
   | { type: "TRANSPOSE"; semitones: number }
   | { type: "ADD_SECTION"; sectionType: "lyrics" | "solo" }
   | { type: "REMOVE_SECTION"; sectionId: string }
+  | { type: "DUPLICATE_SECTION"; sectionId: string }
   | { type: "RENAME_SECTION"; sectionId: string; name: string }
   | { type: "MOVE_SECTION"; sectionId: string; direction: -1 | 1 }
   | { type: "SPLIT_SECTION"; sectionId: string; lineIndex: number }
   | { type: "SET_LINES_FROM_TEXT"; sectionId: string; text: string }
   | { type: "IMPORT_LYRICS"; text: string }
   | { type: "ADD_LINE"; sectionId: string }
+  | { type: "REPLACE_LINE_CHORDS"; sectionId: string; lineId: string; chords: ChordMark[] }
   | {
       type: "UPDATE_LINE_TEXT";
       sectionId: string;
@@ -86,6 +88,31 @@ function reducer(state: Song, action: SongAction): Song {
         ...state,
         sections: state.sections.filter((s) => s.id !== action.sectionId),
       };
+
+    case "DUPLICATE_SECTION": {
+      const index = state.sections.findIndex(
+        (section) => section.id === action.sectionId,
+      );
+      if (index === -1) return state;
+
+      const source = state.sections[index];
+      const duplicate: Section = {
+        ...source,
+        id: crypto.randomUUID(),
+        name: `${source.name} Copy`,
+        lines: source.lines.map((line) => ({
+          ...line,
+          id: crypto.randomUUID(),
+          chords: line.chords.map((chord) => ({
+            ...chord,
+            id: crypto.randomUUID(),
+          })),
+        })),
+      };
+      const sections = [...state.sections];
+      sections.splice(index + 1, 0, duplicate);
+      return { ...state, sections };
+    }
 
     case "RENAME_SECTION":
       return {
@@ -153,6 +180,29 @@ function reducer(state: Song, action: SongAction): Song {
         sections: state.sections.map((s) =>
           s.id === action.sectionId
             ? { ...s, lines: [...s.lines, newLine("")] }
+            : s,
+        ),
+      };
+
+    case "REPLACE_LINE_CHORDS":
+      return {
+        ...state,
+        sections: state.sections.map((s) =>
+          s.id === action.sectionId
+            ? {
+                ...s,
+                lines: s.lines.map((line) =>
+                  line.id === action.lineId
+                    ? {
+                        ...line,
+                        chords: action.chords.map((chord) => ({
+                          ...chord,
+                          id: crypto.randomUUID(),
+                        })),
+                      }
+                    : line,
+                ),
+              }
             : s,
         ),
       };

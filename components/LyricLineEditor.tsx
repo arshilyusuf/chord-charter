@@ -17,6 +17,9 @@ interface Props {
   onDeleteChord: (chordId: string) => void;
   onChangeText: (text: string) => void;
   onDeleteLine: () => void;
+  onCopyChords: () => void;
+  onPasteChords: () => void;
+  canPasteChords: boolean;
 }
 
 export default function LyricLineEditor({
@@ -28,6 +31,9 @@ export default function LyricLineEditor({
   onDeleteChord,
   onChangeText,
   onDeleteLine,
+  onCopyChords,
+  onPasteChords,
+  canPasteChords,
 }: Props) {
   const [pending, setPending] = useState<{
     position: number;
@@ -98,6 +104,21 @@ export default function LyricLineEditor({
           className="w-full bg-transparent font-normal leading-6 outline-none text-neutral-800 placeholder:text-neutral-300"
         />
       </div>
+      <button
+        onClick={onCopyChords}
+        title="Copy chords from this line"
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-300 hover:text-neutral-700 text-xs mt-1"
+      >
+        Copy chords
+      </button>
+      <button
+        onClick={onPasteChords}
+        disabled={!canPasteChords}
+        title="Replace this line's chords with the copied chords"
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-300 hover:text-neutral-700 disabled:pointer-events-none disabled:opacity-20 text-xs mt-1"
+      >
+        Paste chords
+      </button>
       <button
         onClick={onDeleteLine}
         title="Delete line"

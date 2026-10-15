@@ -158,8 +158,7 @@ export async function exportSongToPdf(song: Song) {
 
     doc.setFont("ClashGroteskMedium", "normal");
     doc.setFontSize(textFontSize);
-    const charWidth = doc.getTextWidth("0"); // Chord positions use the monospace grid.
-    const maxTextWidth = colWidth - 4; // Keep only a small breathing room at the column edge.
+    const maxTextWidth = colWidth - 6; // Keep a small, shared right margin for lyrics and chords.
 
     for (const originalLine of section.lines) {
       let text = originalLine.text || "";
@@ -173,6 +172,15 @@ export async function exportSongToPdf(song: Song) {
       if (text.length <= maxChordPos) {
         text = text.padEnd(maxChordPos + 1, " ");
       }
+
+      doc.setFont("IBMPlexMonoBold", "normal");
+      const chordWidths = new Map(
+        originalLine.chords.map((chord) => [
+          chord.id,
+          doc.getTextWidth(chord.symbol) + 4,
+        ]),
+      );
+      doc.setFont("ClashGroteskMedium", "normal");
 
       // 2. Break the original line into sub-lines that fit the column width.
       const subLines: { text: string; chords: typeof originalLine.chords }[] =
@@ -200,6 +208,20 @@ export async function exportSongToPdf(song: Song) {
               endIndex = lastSpace;
             }
           }
+
+          while (endIndex > startIndex) {
+            const overflowingChord = originalLine.chords.find(
+              (chord) =>
+                chord.position >= startIndex &&
+                chord.position < endIndex &&
+                doc.getTextWidth(text.substring(startIndex, chord.position)) +
+                  (chordWidths.get(chord.id) ?? 0) >
+                  maxTextWidth,
+            );
+            if (!overflowingChord) break;
+            endIndex = overflowingChord.position;
+          }
+          if (endIndex === startIndex) endIndex += 1;
 
           // Extract text for this wrapped line
           const subText = text.substring(startIndex, endIndex);
@@ -229,7 +251,11 @@ export async function exportSongToPdf(song: Song) {
           doc.setFillColor(254, 226, 226);
           doc.setTextColor(153, 27, 27);
           const chordBadges = line.chords.map((chord) => {
-            const chordX = x + chord.position * charWidth;
+            doc.setFont("ClashGroteskMedium", "normal");
+            const chordX = x + doc.getTextWidth(
+              line.text.substring(0, chord.position),
+            );
+            doc.setFont("IBMPlexMonoBold", "normal");
             const chordWidth = doc.getTextWidth(chord.symbol);
             return { chord, chordX, chordWidth };
           });

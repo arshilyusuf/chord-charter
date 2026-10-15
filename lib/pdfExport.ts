@@ -35,7 +35,7 @@ async function loadPdfImage(url: string) {
 
 export async function exportSongToPdf(song: Song) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const [, , , , logoData] = await Promise.all([
+  const [, , , , , logoData] = await Promise.all([
     loadPdfFont(
       doc,
       "/ClashGrotesk-Bold.ttf",
@@ -53,6 +53,12 @@ export async function exportSongToPdf(song: Song) {
       "/ClashGrotesk-Light.ttf",
       "ClashGrotesk-Light.ttf",
       "ClashGroteskLight",
+    ),
+    loadPdfFont(
+      doc,
+      "/IBM_Plex_Mono/IBMPlexMono-Regular.ttf",
+      "IBMPlexMono-Regular.ttf",
+      "IBMPlexMono",
     ),
     loadPdfFont(
       doc,
@@ -156,9 +162,10 @@ export async function exportSongToPdf(song: Song) {
     doc.setTextColor(0, 0, 0);
     y += sectionFontSize + sectionGapBefore;
 
-    doc.setFont("ClashGroteskMedium", "normal");
+    doc.setFont("IBMPlexMono", "normal");
     doc.setFontSize(textFontSize);
-    const maxTextWidth = colWidth - 6; // Keep a small, shared right margin for lyrics and chords.
+    const charWidth = doc.getTextWidth("0");
+    const maxChars = Math.max(1, Math.floor((colWidth - 6) / charWidth));
 
     for (const originalLine of section.lines) {
       let text = originalLine.text || "";
@@ -173,15 +180,6 @@ export async function exportSongToPdf(song: Song) {
         text = text.padEnd(maxChordPos + 1, " ");
       }
 
-      doc.setFont("IBMPlexMonoBold", "normal");
-      const chordWidths = new Map(
-        originalLine.chords.map((chord) => [
-          chord.id,
-          doc.getTextWidth(chord.symbol) + 4,
-        ]),
-      );
-      doc.setFont("ClashGroteskMedium", "normal");
-
       // 2. Break the original line into sub-lines that fit the column width.
       const subLines: { text: string; chords: typeof originalLine.chords }[] =
         [];
@@ -191,35 +189,12 @@ export async function exportSongToPdf(song: Song) {
       } else {
         let startIndex = 0;
         while (startIndex < text.length) {
-          let endIndex = startIndex;
-          while (
-            endIndex < text.length &&
-            doc.getTextWidth(text.substring(startIndex, endIndex + 1)) <=
-              maxTextWidth
-          ) {
-            endIndex += 1;
-          }
-
-          if (endIndex === startIndex) {
-            endIndex += 1;
-          } else if (endIndex < text.length) {
-            const lastSpace = text.lastIndexOf(" ", endIndex - 1);
+          let endIndex = Math.min(startIndex + maxChars, text.length);
+          if (endIndex < text.length) {
+            const lastSpace = text.lastIndexOf(" ", endIndex);
             if (lastSpace > startIndex) {
               endIndex = lastSpace;
             }
-          }
-
-          while (endIndex > startIndex) {
-            const overflowingChord = originalLine.chords.find(
-              (chord) =>
-                chord.position >= startIndex &&
-                chord.position < endIndex &&
-                doc.getTextWidth(text.substring(startIndex, chord.position)) +
-                  (chordWidths.get(chord.id) ?? 0) >
-                  maxTextWidth,
-            );
-            if (!overflowingChord) break;
-            endIndex = overflowingChord.position;
           }
           if (endIndex === startIndex) endIndex += 1;
 
@@ -251,10 +226,7 @@ export async function exportSongToPdf(song: Song) {
           doc.setFillColor(254, 226, 226);
           doc.setTextColor(153, 27, 27);
           const chordBadges = line.chords.map((chord) => {
-            doc.setFont("ClashGroteskMedium", "normal");
-            const chordX = x + doc.getTextWidth(
-              line.text.substring(0, chord.position),
-            );
+            const chordX = x + chord.position * charWidth;
             doc.setFont("IBMPlexMonoBold", "normal");
             const chordWidth = doc.getTextWidth(chord.symbol);
             return { chord, chordX, chordWidth };
@@ -279,7 +251,7 @@ export async function exportSongToPdf(song: Song) {
           y += textFontSize + rowGap;
         }
 
-        doc.setFont("ClashGroteskMedium", "normal");
+        doc.setFont("IBMPlexMono", "normal");
         doc.setTextColor(0, 0, 0);
         doc.text(line.text || " ", x, y);
         y += textFontSize + lineGap;

@@ -4,7 +4,6 @@ import { Line } from "@/lib/types";
 import {
   CHORD_FONT_FAMILY,
   CHORD_FONT_SIZE,
-  LYRIC_FONT_FAMILY,
 } from "@/lib/constants";
 import ChordBadge from "./ChordBadge";
 
@@ -100,7 +99,7 @@ export default function LyricLineEditor({
           value={line.text}
           onChange={(e) => onChangeText(e.target.value)}
           placeholder="Type lyric line…"
-          style={{ fontFamily: LYRIC_FONT_FAMILY, fontSize: CHORD_FONT_SIZE }}
+          style={{ fontFamily: CHORD_FONT_FAMILY, fontSize: CHORD_FONT_SIZE }}
           className="w-full bg-transparent font-normal leading-6 outline-none text-neutral-800 placeholder:text-neutral-300"
         />
       </div>
